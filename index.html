@@ -3,156 +3,111 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ridge Capital Solutions — Attendance Tracker</title>
+<title>Ridge Capital Solutions — Live Attendance Board</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-6">
-<div class="max-w-6xl mx-auto">
-<h1 class="text-3xl font-bold mb-6">Ridge Capital Solutions — Attendance Tracker</h1>
+<div class="max-w-7xl mx-auto">
+<div class="flex items-center justify-between mb-6">
+<h1 class="text-3xl font-bold">Ridge Capital Solutions — Shared Live Board (EST)</h1>
+<div id="reportBtns" class="hidden flex gap-2 items-center">
+<input id="weekPick" type="date" class="border px-2 py-1 text-sm rounded" />
+<button onclick="openWeekly()" class="bg-indigo-600 text-white px-2 py-1 text-sm rounded">Weekly</button>
+<input id="monthPick" type="month" class="border px-2 py-1 text-sm rounded" />
+<button onclick="openMonthly()" class="bg-green-600 text-white px-2 py-1 text-sm rounded">Monthly</button>
+<button onclick="openDaily()" class="bg-gray-700 text-white px-2 py-1 text-sm rounded">Daily</button>
+</div>
+<button onclick="unlockReports()" class="text-xs underline">Reports</button>
+</div>
 
-<div class="bg-white rounded-2xl shadow p-6 mb-6 grid md:grid-cols-6 gap-3">
-<input id="name" placeholder="Employee Name" class="border rounded-xl p-3" />
-<input id="team" placeholder="Team" class="border rounded-xl p-3" />
-<input id="shiftStart" type="time" class="border rounded-xl p-3" />
-<input id="shiftEnd" type="time" class="border rounded-xl p-3" />
-<select id="type" class="border rounded-xl p-3">
-<option value="Login">Login</option>
-<option value="Logout">Logout</option>
+<div class="bg-white rounded-2xl shadow p-6 mb-6 grid md:grid-cols-5 gap-3">
+<select id="name" class="border rounded-xl p-3">
+<option value="">Select Employee</option>
+<option>Aira</option><option>Hazel</option><option>AJ</option><option>James</option><option>Michael</option><option>Denmark</option><option>Randy</option>
 </select>
-<button onclick="recordEntry()" class="bg-blue-600 text-white rounded-xl p-3">Record</button>
+<button onclick="login()" class="bg-blue-600 text-white rounded-xl p-3">Login</button>
+<button onclick="lunch()" class="bg-yellow-500 text-white rounded-xl p-3">Lunch</button>
+<button onclick="breakTime()" class="bg-orange-500 text-white rounded-xl p-3">Break</button>
+<button onclick="logout()" class="bg-red-600 text-white rounded-xl p-3">Logout</button>
 </div>
 
 <div class="bg-white rounded-2xl shadow p-6 mb-6">
-<h2 class="text-xl font-semibold mb-3">Daily Summary</h2>
-<div id="summary"></div>
-</div>
-
-<div class="bg-white rounded-2xl shadow p-6">
-<div class="flex justify-between mb-3">
-<h2 class="text-xl font-semibold">History</h2>
-<div class="flex gap-2">
-<button onclick="adminLogin()" class="bg-gray-700 text-white px-4 py-2 rounded-xl">Admin</button>
-<button onclick="exportCSV()" class="bg-green-600 text-white px-4 py-2 rounded-xl">Export</button>
-</div>
-</div>
+<h2 class="text-xl font-semibold mb-3">Live Tracker</h2>
 <table class="w-full border text-sm">
-<thead class="bg-gray-200">
-<tr>
-<th class="border p-2">Name</th>
-<th class="border p-2">Team</th>
-<th class="border p-2">Type</th>
-<th class="border p-2">Date</th>
-<th class="border p-2">Time</th>
-<th class="border p-2">Late</th>
-<th class="border p-2">Undertime</th>
-<th class="border p-2">Action</th>
-</tr>
-</thead>
+<thead class="bg-gray-200"><tr><th class="border p-2">Name</th><th class="border p-2">Shift</th><th class="border p-2">Login</th><th class="border p-2">Online Minutes</th><th class="border p-2">Status</th></tr></thead>
 <tbody id="tableBody"></tbody>
 </table>
 </div>
 </div>
 
 <script>
-const STORAGE_KEY='ridgeAttendance';
-const ADMIN_PASSWORD='ridgeadmin123';
-const SHEET_WEBHOOK_URL='https://script.google.com/macros/s/AKfycbzt49BZb-rMgjCQAUokC0fy3g2qECh7Bfpoh-SX5jkRiup9ACwjfd4GSlgGoWRWoSga/exec';
-let isAdmin=false;
+const PASSWORD='Ridge2026!';
+const SHEET_POST_URL='PASTE_GOOGLE_SCRIPT_WEBAPP_URL_HERE';
+const SHEET_CSV_URL='PASTE_PUBLISHED_SHEET_CSV_URL_HERE';
+const DAILY_SHEET_URL='PASTE_DAILY_SHEET_LINK';
+const WEEKLY_SHEET_URL='PASTE_WEEKLY_SHEET_LINK';
+const MONTHLY_SHEET_URL='PASTE_MONTHLY_SHEET_LINK';
 
-function toMinutes(t){const[a,b]=t.split(':');return(+a*60)+(+b)}
+const schedules={Aira:['09:00','18:00'],Hazel:['10:00','19:00'],AJ:['09:00','16:00'],James:['08:00','15:00'],Michael:['10:00','19:00'],Denmark:['10:00','20:00'],Randy:['12:00','21:00']};
+const requiredMin=name=>['Aira','Hazel','Michael','Denmark','Randy'].includes(name)?480:420;
 
-function recordEntry(){
-const name=nameInput.value.trim();
-const team=teamInput.value.trim();
-const type=typeInput.value;
-const shiftStart=shiftStartInput.value;
-const shiftEnd=shiftEndInput.value;
-if(!name||!shiftStart||!shiftEnd)return alert('Complete fields');
+function unlockReports(){const p=prompt('Enter password');if(p===PASSWORD)document.getElementById('reportBtns').classList.remove('hidden');}
+function openDaily(){window.open(DAILY_SHEET_URL,'_blank');}
+function openWeekly(){const d=new Date(document.getElementById('weekPick').value);if(!d)return;const sun=new Date(d);sun.setDate(d.getDate()-d.getDay());const sat=new Date(sun);sat.setDate(sun.getDate()+6);window.open(WEEKLY_SHEET_URL+`?start=${sun.toISOString()}&end=${sat.toISOString()}`,'_blank');}
+function openMonthly(){const m=document.getElementById('monthPick').value;if(!m)return;window.open(MONTHLY_SHEET_URL+`?month=${m}`,'_blank');}
 
-const now=new Date();
-const date=now.toLocaleDateString();
-const time=now.toLocaleTimeString();
+function estNow(){return new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));}
+function minutes(a,b){return Math.max(0,Math.floor((b-a)/60000));}
 
-let late='';let undertime='';
-const currentMinutes=now.getHours()*60+now.getMinutes();
+async function postEvent(name,type){const now=estNow();await fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:now.toLocaleDateString('en-US'),time:now.toISOString()})});setTimeout(load,1500);} 
+async function login(){const n=name.value;if(!n)return alert('Select employee');postEvent(n,'Login');}
+async function lunch(){const n=name.value;if(!n)return alert('Select employee');postEvent(n,'Lunch');}
+async function breakTime(){const n=name.value;if(!n)return alert('Select employee');postEvent(n,'Break');}
+async function logout(){const n=name.value;if(!n)return alert('Select employee');postEvent(n,'Logout');}
 
-if(type==='Login'){
-const diff=currentMinutes-toMinutes(shiftStart);
-if(diff>0)late=diff+' min';
-}
-if(type==='Logout'){
-const diff=toMinutes(shiftEnd)-currentMinutes;
-if(diff>0)undertime=diff+' min';
-}
+function shiftStartDate(name,base){const [h,m]=schedules[name][0].split(':');const d=new Date(base);d.setHours(h,m,0,0);return d;}
 
-const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-const entry={name,team,type,date,time,late,undertime};
-records.unshift(entry);
-localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
-syncToSheet(entry);
-loadRecords();
-}
+async function load(){
+if(!SHEET_CSV_URL.startsWith('http'))return;
+const res=await fetch(SHEET_CSV_URL+'?t='+Date.now());
+const text=await res.text();
+const rows=text.split('\n').slice(1).map(r=>r.split(','));
+const today=estNow().toLocaleDateString('en-US');
+let events={};
+rows.forEach(r=>{const n=r[0],t=r[1]||r[2],d=r[2]||r[1],time=new Date(r[3]||r[4]);if(!n||d!==today)return;if(!events[n])events[n]=[];events[n].push({type:t,time});});
 
-function loadRecords(){
-const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-tableBody.innerHTML='';
-let today=new Date().toLocaleDateString();
-let present=new Set();
-records.forEach((r,i)=>{
-if(r.date===today&&r.type==='Login')present.add(r.name);
-const del=isAdmin?`<button onclick="deleteRecord(${i})" class='text-red-600'>X</button>`:'';
+const tbody=document.getElementById('tableBody');tbody.innerHTML='';
+Object.keys(schedules).forEach(name=>{
+const ev=(events[name]||[]).sort((a,b)=>a.time-b.time);
+let login=null,online=0,lunchStart=null,breakStart=null,status='Offline';
+let lastPoint=null;
+for(const e of ev){
+ if(e.type==='Login'){login=e.time;lastPoint=e.time;status='Online';}
+ else if(e.type==='Lunch'&&login){if(!lunchStart){online+=minutes(lastPoint,e.time);lunchStart=e.time;status='Lunch';}else{lastPoint=e.time;lunchStart=null;status='Online';}}
+ else if(e.type==='Break'&&login){
+        // Break is tracked but DOES NOT deduct online time
+        if(!breakStart){breakStart=e.time;status='Quick Bio';}
+        else{breakStart=null;status='Online';}
+      }
+ else if(e.type==='Logout'&&login){online+=minutes(lastPoint,e.time);lastPoint=null;}
+ }
+ if(login&&lastPoint)online+=minutes(lastPoint,estNow());
 
-tableBody.innerHTML+=`<tr>
-<td class='border p-2'>${r.name}</td>
-<td class='border p-2'>${r.team}</td>
-<td class='border p-2'>${r.type}</td>
-<td class='border p-2'>${r.date}</td>
-<td class='border p-2'>${r.time}</td>
-<td class='border p-2'>${r.late||''}</td>
-<td class='border p-2'>${r.undertime||''}</td>
-<td class='border p-2 text-center'>${del}</td>
-</tr>`;
+ // late calculation (10 min grace)
+ let lateMin=0;if(login){const sched=shiftStartDate(name,login);sched.setMinutes(sched.getMinutes()+10);lateMin=Math.max(0,minutes(sched,login));}
+ // overlunch
+ let overlunch=0;if(lunchStart){overlunch=Math.max(0,minutes(lunchStart,estNow())-60);} 
+ // undertime
+ let undertime=0;if(login&&!lunchStart){const req=requiredMin(name);undertime=Math.max(0,req-online);} 
+
+ if(overlunch>0)status='Overlunch';
+ else if(lateMin>0&&status==='Online')status='Late';
+ else if(undertime>0&&status==='Offline')status='Undertime';
+
+ tbody.innerHTML+=`<tr><td class='border p-2'>${name}</td><td class='border p-2'>${schedules[name][0]}-${schedules[name][1]}</td><td class='border p-2'>${login?login.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2'>${online}</td><td class='border p-2'>${status}</td></tr>`;
 });
-summary.innerHTML=`Employees Present Today: <b>${present.size}</b>`;
 }
-
-function deleteRecord(i){
-const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-records.splice(i,1);
-localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
-loadRecords();
-}
-
-function adminLogin(){
-const pass=prompt('Enter admin password');
-if(pass===ADMIN_PASSWORD){isAdmin=true;alert('Admin mode enabled');loadRecords();}
-}
-
-function exportCSV(){
-const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-let csv='Name,Team,Type,Date,Time,Late,Undertime\n';
-records.forEach(r=>csv+=`${r.name},${r.team},${r.type},${r.date},${r.time},${r.late},${r.undertime}\n`);
-const blob=new Blob([csv]);
-const a=document.createElement('a');
-a.href=URL.createObjectURL(blob);
-a.download='attendance.csv';
-a.click();
-}
-
-function syncToSheet(data){
-if(!SHEET_WEBHOOK_URL.startsWith('http'))return;
-fetch(SHEET_WEBHOOK_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-}
-
-const nameInput=document.getElementById('name');
-const teamInput=document.getElementById('team');
-const typeInput=document.getElementById('type');
-const shiftStartInput=document.getElementById('shiftStart');
-const shiftEndInput=document.getElementById('shiftEnd');
-const tableBody=document.getElementById('tableBody');
-const summary=document.getElementById('summary');
-
-loadRecords();
+setInterval(load,60000);load();
 </script>
 </body>
 </html>
