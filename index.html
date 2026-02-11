@@ -10,14 +10,7 @@
 <div class="max-w-7xl mx-auto">
 <div class="flex items-center justify-between mb-6">
 <h1 class="text-3xl font-bold">Ridge Capital Solutions — Shared Live Board (EST)</h1>
-<div id="reportBtns" class="hidden flex gap-2 items-center">
-<input id="weekPick" type="date" class="border px-2 py-1 text-sm rounded" />
-<button onclick="openWeekly()" class="bg-indigo-600 text-white px-2 py-1 text-sm rounded">Weekly</button>
-<input id="monthPick" type="month" class="border px-2 py-1 text-sm rounded" />
-<button onclick="openMonthly()" class="bg-green-600 text-white px-2 py-1 text-sm rounded">Monthly</button>
-<button onclick="openDaily()" class="bg-gray-700 text-white px-2 py-1 text-sm rounded">Daily</button>
-</div>
-<button onclick="unlockReports()" class="text-xs underline">Reports</button>
+<a href="#" onclick="unlockReports()" class="text-xs underline">Reports</a>
 </div>
 
 <div class="bg-white rounded-2xl shadow p-6 mb-6 grid md:grid-cols-5 gap-3">
@@ -34,7 +27,7 @@
 <div class="bg-white rounded-2xl shadow p-6 mb-6">
 <h2 class="text-xl font-semibold mb-3">Live Tracker</h2>
 <table class="w-full border text-sm">
-<thead class="bg-gray-200"><tr><th class="border p-2">Name</th><th class="border p-2">Shift</th><th class="border p-2">Login</th><th class="border p-2">Online Minutes</th><th class="border p-2">Status</th></tr></thead>
+<thead class="bg-gray-200"><tr><th class="border p-2">Name</th><th class="border p-2">Last Event</th><th class="border p-2">Time (EST)</th></tr></thead>
 <tbody id="tableBody"></tbody>
 </table>
 </div>
@@ -43,31 +36,41 @@
 <script>
 const PASSWORD='Ridge2026!';
 const SHEET_POST_URL='https://script.google.com/macros/s/AKfycbxluH0nRb-q-6EZ8Y37YqYf_luc_SdeThLNBscY5Tb9ayr30ungN988UodaMrf-rjat/exec';
-const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/edit?usp=sharing';
-const DAILY_SHEET_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/edit?gid=0#gid=0';
-const WEEKLY_SHEET_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/edit?gid=857221325#gid=857221325';
-const MONTHLY_SHEET_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/edit?gid=258622705#gid=258622705';
+// IMPORTANT: must use CSV export endpoint not normal share link
+const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/gviz/tq?tqx=out:csv&sheet=RawLogs';
 
-const schedules={Aira:['09:00','18:00'],Hazel:['10:00','19:00'],AJ:['09:00','16:00'],James:['08:00','15:00'],Michael:['10:00','19:00'],Denmark:['10:00','20:00'],Randy:['12:00','21:00']};
-
-function unlockReports(){const p=prompt('Enter password');if(p===PASSWORD)document.getElementById('reportBtns').classList.remove('hidden');}
-function openDaily(){window.open(DAILY_SHEET_URL,'_blank');}
-function openWeekly(){window.open(WEEKLY_SHEET_URL,'_blank');}
-function openMonthly(){window.open(MONTHLY_SHEET_URL,'_blank');}
+function unlockReports(){const p=prompt('Enter password');if(p===PASSWORD)window.open('https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY','_blank');}
 
 function estNow(){return new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));}
 
 async function postEvent(name,type){
- try{
-  await fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
-  alert(type+" recorded for "+name);
- }catch(e){alert('Connection error — check deployment permissions');}
+ if(!name) return alert('Select employee');
+ await fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
+ setTimeout(load,2000);
 }
 
-async function login(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Login');}
-async function lunch(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Lunch');}
-async function breakTime(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Break');}
-async function logout(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Logout');}
+function login(){postEvent(document.getElementById('name').value,'Login');}
+function lunch(){postEvent(document.getElementById('name').value,'Lunch');}
+function breakTime(){postEvent(document.getElementById('name').value,'Break');}
+function logout(){postEvent(document.getElementById('name').value,'Logout');}
+
+async function load(){
+ try{
+  const res=await fetch(SHEET_CSV_URL+"&t="+Date.now());
+  const text=await res.text();
+  const rows=text.split('\n').slice(1).map(r=>r.split(','));
+  const latest={};
+  rows.forEach(r=>{if(!r[0])return;latest[r[0]]={type:r[1],time:r[3]};});
+  const body=document.getElementById('tableBody');
+  body.innerHTML='';
+  Object.keys(latest).forEach(n=>{
+   body.innerHTML+=`<tr><td class='border p-2'>${n}</td><td class='border p-2'>${latest[n].type}</td><td class='border p-2'>${new Date(latest[n].time).toLocaleTimeString('en-US',{timeZone:'America/New_York'})}</td></tr>`;
+  });
+ }catch(e){console.log('Tracker waiting for first log...');}
+}
+
+setInterval(load,10000);
+load();
 </script>
 </body>
 </html>
