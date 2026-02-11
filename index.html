@@ -27,7 +27,7 @@
 <div class="bg-white rounded-2xl shadow p-6 mb-6">
 <h2 class="text-xl font-semibold mb-3">Live Tracker</h2>
 <table class="w-full border text-sm">
-<thead class="bg-gray-200"><tr><th class="border p-2">Name</th><th class="border p-2">Last Event</th><th class="border p-2">Time (EST)</th></tr></thead>
+<thead class="bg-gray-200"><tr><th class="border p-2">Name</th><th class="border p-2">Login</th><th class="border p-2">Logout</th><th class="border p-2">Last Event</th><th class="border p-2">Time (EST)</th></tr></thead>
 <tbody id="tableBody"></tbody>
 </table>
 </div>
@@ -36,17 +36,18 @@
 <script>
 const PASSWORD='Ridge2026!';
 const SHEET_POST_URL='https://script.google.com/macros/s/AKfycbxluH0nRb-q-6EZ8Y37YqYf_luc_SdeThLNBscY5Tb9ayr30ungN988UodaMrf-rjat/exec';
-// IMPORTANT: must use CSV export endpoint not normal share link
 const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/gviz/tq?tqx=out:csv&sheet=RawLogs';
 
 function unlockReports(){const p=prompt('Enter password');if(p===PASSWORD)window.open('https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY','_blank');}
-
 function estNow(){return new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));}
 
 async function postEvent(name,type){
  if(!name) return alert('Select employee');
- await fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
- setTimeout(load,2000);
+ try{
+  await fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
+  alert(type+' recorded');
+  setTimeout(load,2000);
+ }catch(e){alert('Failed to send log. Check Apps Script deployment permissions');}
 }
 
 function login(){postEvent(document.getElementById('name').value,'Login');}
@@ -59,18 +60,22 @@ async function load(){
   const res=await fetch(SHEET_CSV_URL+"&t="+Date.now());
   const text=await res.text();
   const rows=text.split('\n').slice(1).map(r=>r.split(','));
-  const latest={};
-  rows.forEach(r=>{if(!r[0])return;latest[r[0]]={type:r[1],time:r[3]};});
-  const body=document.getElementById('tableBody');
-  body.innerHTML='';
-  Object.keys(latest).forEach(n=>{
-   body.innerHTML+=`<tr><td class='border p-2'>${n}</td><td class='border p-2'>${latest[n].type}</td><td class='border p-2'>${new Date(latest[n].time).toLocaleTimeString('en-US',{timeZone:'America/New_York'})}</td></tr>`;
+  const data={};
+  rows.forEach(r=>{
+    const name=r[0]; const type=r[1]; const time=r[3];
+    if(!name) return;
+    if(!data[name]) data[name]={login:'-',logout:'-',last:type,time};
+    if(type==='Login') data[name].login=new Date(time).toLocaleTimeString('en-US',{timeZone:'America/New_York'});
+    if(type==='Logout') data[name].logout=new Date(time).toLocaleTimeString('en-US',{timeZone:'America/New_York'});
+    data[name].last=type; data[name].time=new Date(time).toLocaleTimeString('en-US',{timeZone:'America/New_York'});
   });
- }catch(e){console.log('Tracker waiting for first log...');}
+  const body=document.getElementById('tableBody'); body.innerHTML='';
+  Object.keys(data).forEach(n=>{
+    body.innerHTML+=`<tr><td class='border p-2'>${n}</td><td class='border p-2'>${data[n].login}</td><td class='border p-2'>${data[n].logout}</td><td class='border p-2'>${data[n].last}</td><td class='border p-2'>${data[n].time}</td></tr>`;
+  });
+ }catch(e){console.log('waiting for logs');}
 }
-
-setInterval(load,10000);
-load();
+setInterval(load,10000); load();
 </script>
 </body>
 </html>
