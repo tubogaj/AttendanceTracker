@@ -60,10 +60,10 @@ function estNow(){return new Date(new Date().toLocaleString('en-US',{timeZone:'A
 function minutes(a,b){return Math.max(0,Math.floor((b-a)/60000));}
 
 async function postEvent(name,type){const now=estNow();await fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:now.toLocaleDateString('en-US'),time:now.toISOString()})});setTimeout(load,1500);} 
-async function login(){const n=name.value;if(!n)return alert('Select employee');postEvent(n,'Login');}
-async function lunch(){const n=name.value;if(!n)return alert('Select employee');postEvent(n,'Lunch');}
-async function breakTime(){const n=name.value;if(!n)return alert('Select employee');postEvent(n,'Break');}
-async function logout(){const n=name.value;if(!n)return alert('Select employee');postEvent(n,'Logout');}
+async function login(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Login');}
+async function lunch(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Lunch');}
+async function breakTime(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Break');}
+async function logout(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Logout');}
 
 function shiftStartDate(name,base){const [h,m]=schedules[name][0].split(':');const d=new Date(base);d.setHours(h,m,0,0);return d;}
 
