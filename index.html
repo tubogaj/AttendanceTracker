@@ -6,19 +6,19 @@
 <title>Attendance Tracker</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-6">
+<body class="bg-slate-100 min-h-screen p-6">
 <div class="max-w-7xl mx-auto">
 
 <!-- Header -->
-<div class="flex items-center justify-between mb-6">
+<div class="flex items-center justify-between mb-6 bg-slate-900 text-white p-4 rounded-2xl shadow">
   <div class="flex items-center gap-4">
-    <img src="https://i.postimg.cc/NjskjGmv/Ridge-White-Logo.png" class="h-12 bg-black p-2 rounded" />
+    <img src="https://i.postimg.cc/NjskjGmv/Ridge-White-Logo.png" class="h-12" />
     <div>
-      <div class="text-2xl font-bold">Attendance Tracker</div>
-      <div id="clock" class="text-sm text-gray-600"></div>
+      <div class="text-2xl font-semibold tracking-wide">Attendance Tracker</div>
+      <div id="clock" class="text-sm text-slate-300"></div>
     </div>
   </div>
-  <button onclick="openReport()" class="bg-gray-800 text-white px-3 py-1 rounded text-sm">Report</button>
+  <button onclick="openReport()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm">Report</button>
 </div>
 
 <!-- Controls -->
@@ -27,17 +27,17 @@
 <option value="">Select Employee</option>
 <option>Aira</option><option>Hazel</option><option>AJ</option><option>James</option><option>Michael</option><option>Denmark</option><option>Randy</option>
 </select>
-<button onclick="login()" class="bg-blue-600 text-white rounded-xl p-3">Login</button>
-<button onclick="lunch()" class="bg-yellow-500 text-white rounded-xl p-3">Lunch</button>
-<button onclick="breakTime()" class="bg-orange-500 text-white rounded-xl p-3">Break</button>
-<button onclick="logout()" class="bg-red-600 text-white rounded-xl p-3">Logout</button>
+<button onclick="login()" class="bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl p-3">Login</button>
+<button onclick="lunch()" class="bg-amber-500 hover:bg-amber-600 text-white rounded-xl p-3">Lunch</button>
+<button onclick="breakTime()" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl p-3">Break</button>
+<button onclick="logout()" class="bg-rose-700 hover:bg-rose-800 text-white rounded-xl p-3">Logout</button>
 </div>
 
 <!-- Live Tracker -->
 <div class="bg-white rounded-2xl shadow p-6 mb-6">
 <h2 class="text-xl font-semibold mb-3">Live Tracker</h2>
 <table class="w-full border text-sm">
-<thead class="bg-gray-200"><tr><th class="border p-2">Name</th><th class="border p-2">Shift</th><th class="border p-2">Login</th><th class="border p-2">Logout</th><th class="border p-2">Status</th></tr></thead>
+<thead class="bg-slate-200"><tr><th class="border p-2">Name</th><th class="border p-2">Shift</th><th class="border p-2">Login</th><th class="border p-2">Logout</th><th class="border p-2">Status</th></tr></thead>
 <tbody id="tableBody"></tbody>
 </table>
 </div>
@@ -57,19 +57,21 @@ function mins(a,b){return Math.max(0,Math.floor((b-a)/60000));}
 
 function openReport(){const p=prompt('Enter password');if(p===PASSWORD)window.open(REPORT_URL,'_blank');else alert('Incorrect password');}
 
-async function postEvent(name,type){
- if(!name) return alert('Select employee');
- await fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
- setTimeout(load,2000);
+async function postEvent(name,type,btn){
+ if(!name){alert('Select employee');return}
+ btn.classList.add('scale-95','shadow-inner','opacity-70');
+ setTimeout(()=>btn.classList.remove('scale-95','shadow-inner','opacity-70'),700);
+ try{
+  fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
+  setTimeout(load,1500);
+ }catch(e){console.log('send failed');}
+}/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
+  alert(type+' recorded');
+  setTimeout(load,2000);
+ }catch(e){alert('Unable to send log');}
 }
 function login(){postEvent(document.getElementById('name').value,'Login');}
-function lunch(){postEvent(document.getElementById('name').value,'Lunch');}
-function breakTime(){postEvent(document.getElementById('name').value,'Break');}
-function logout(){postEvent(document.getElementById('name').value,'Logout');}
-
-function updateClock(){
- const now=estNow();
- document.getElementById('clock').innerText=now.toLocaleDateString('en-US',{timeZone:'America/New_York'})+' '+now.toLocaleTimeString('en-US',{timeZone:'America/New_York'});
+function lunch(){postEventfunction login(){postEvent(document.getElementById('name').value,'Login',event.target);}Efunction lunch(){postEvent(document.getElementById('name').value,'Lunch',event.target);}tfunction breakTime(){postEvent(document.getElementById('name').value,'Break',event.target);}{function logout(){postEvent(document.getElementById('name').value,'Logout',event.target);}eDateString('en-US',{timeZone:'America/New_York'})+' '+now.toLocaleTimeString('en-US',{timeZone:'America/New_York'});
 }
 setInterval(updateClock,1000);updateClock();
 
