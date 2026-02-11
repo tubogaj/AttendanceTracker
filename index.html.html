@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ridge Capital Solutions — Attendance Tracker</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+<div class="max-w-6xl mx-auto">
+<h1 class="text-3xl font-bold mb-6">Ridge Capital Solutions — Attendance Tracker</h1>
+
+<div class="bg-white rounded-2xl shadow p-6 mb-6 grid md:grid-cols-6 gap-3">
+<input id="name" placeholder="Employee Name" class="border rounded-xl p-3" />
+<input id="team" placeholder="Team" class="border rounded-xl p-3" />
+<input id="shiftStart" type="time" class="border rounded-xl p-3" />
+<input id="shiftEnd" type="time" class="border rounded-xl p-3" />
+<select id="type" class="border rounded-xl p-3">
+<option value="Login">Login</option>
+<option value="Logout">Logout</option>
+</select>
+<button onclick="recordEntry()" class="bg-blue-600 text-white rounded-xl p-3">Record</button>
+</div>
+
+<div class="bg-white rounded-2xl shadow p-6 mb-6">
+<h2 class="text-xl font-semibold mb-3">Daily Summary</h2>
+<div id="summary"></div>
+</div>
+
+<div class="bg-white rounded-2xl shadow p-6">
+<div class="flex justify-between mb-3">
+<h2 class="text-xl font-semibold">History</h2>
+<div class="flex gap-2">
+<button onclick="adminLogin()" class="bg-gray-700 text-white px-4 py-2 rounded-xl">Admin</button>
+<button onclick="exportCSV()" class="bg-green-600 text-white px-4 py-2 rounded-xl">Export</button>
+</div>
+</div>
+<table class="w-full border text-sm">
+<thead class="bg-gray-200">
+<tr>
+<th class="border p-2">Name</th>
+<th class="border p-2">Team</th>
+<th class="border p-2">Type</th>
+<th class="border p-2">Date</th>
+<th class="border p-2">Time</th>
+<th class="border p-2">Late</th>
+<th class="border p-2">Undertime</th>
+<th class="border p-2">Action</th>
+</tr>
+</thead>
+<tbody id="tableBody"></tbody>
+</table>
+</div>
+</div>
+
+<script>
+const STORAGE_KEY='ridgeAttendance';
+const ADMIN_PASSWORD='ridgeadmin123';
+const SHEET_WEBHOOK_URL='PASTE_GOOGLE_SCRIPT_WEBAPP_URL_HERE';
+let isAdmin=false;
+
+function toMinutes(t){const[a,b]=t.split(':');return(+a*60)+(+b)}
+
+function recordEntry(){
+const name=nameInput.value.trim();
+const team=teamInput.value.trim();
+const type=typeInput.value;
+const shiftStart=shiftStartInput.value;
+const shiftEnd=shiftEndInput.value;
+if(!name||!shiftStart||!shiftEnd)return alert('Complete fields');
+
+const now=new Date();
+const date=now.toLocaleDateString();
+const time=now.toLocaleTimeString();
+
+let late='';let undertime='';
+const currentMinutes=now.getHours()*60+now.getMinutes();
+
+if(type==='Login'){
+const diff=currentMinutes-toMinutes(shiftStart);
+if(diff>0)late=diff+' min';
+}
+if(type==='Logout'){
+const diff=toMinutes(shiftEnd)-currentMinutes;
+if(diff>0)undertime=diff+' min';
+}
+
+const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+const entry={name,team,type,date,time,late,undertime};
+records.unshift(entry);
+localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+syncToSheet(entry);
+loadRecords();
+}
+
+function loadRecords(){
+const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+tableBody.innerHTML='';
+let today=new Date().toLocaleDateString();
+let present=new Set();
+records.forEach((r,i)=>{
+if(r.date===today&&r.type==='Login')present.add(r.name);
+const del=isAdmin?`<button onclick="deleteRecord(${i})" class='text-red-600'>X</button>`:'';
+
+tableBody.innerHTML+=`<tr>
+<td class='border p-2'>${r.name}</td>
+<td class='border p-2'>${r.team}</td>
+<td class='border p-2'>${r.type}</td>
+<td class='border p-2'>${r.date}</td>
+<td class='border p-2'>${r.time}</td>
+<td class='border p-2'>${r.late||''}</td>
+<td class='border p-2'>${r.undertime||''}</td>
+<td class='border p-2 text-center'>${del}</td>
+</tr>`;
+});
+summary.innerHTML=`Employees Present Today: <b>${present.size}</b>`;
+}
+
+function deleteRecord(i){
+const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+records.splice(i,1);
+localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+loadRecords();
+}
+
+function adminLogin(){
+const pass=prompt('Enter admin password');
+if(pass===ADMIN_PASSWORD){isAdmin=true;alert('Admin mode enabled');loadRecords();}
+}
+
+function exportCSV(){
+const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+let csv='Name,Team,Type,Date,Time,Late,Undertime\n';
+records.forEach(r=>csv+=`${r.name},${r.team},${r.type},${r.date},${r.time},${r.late},${r.undertime}\n`);
+const blob=new Blob([csv]);
+const a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download='attendance.csv';
+a.click();
+}
+
+function syncToSheet(data){
+if(!SHEET_WEBHOOK_URL.startsWith('http'))return;
+fetch(SHEET_WEBHOOK_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+}
+
+const nameInput=document.getElementById('name');
+const teamInput=document.getElementById('team');
+const typeInput=document.getElementById('type');
+const shiftStartInput=document.getElementById('shiftStart');
+const shiftEndInput=document.getElementById('shiftEnd');
+const tableBody=document.getElementById('tableBody');
+const summary=document.getElementById('summary');
+
+loadRecords();
+</script>
+</body>
+</html>
