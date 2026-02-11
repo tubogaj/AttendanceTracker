@@ -51,8 +51,7 @@
 
 <script>
 const PASSWORD='Ridge2026!';
-const REPORT_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/edit?gid=1991191224#gid=1991191224';
-const SHEET_POST_URL='https://script.google.com/macros/s/AKfycbxUV3h8zWrJ_jzNw4ZSfrHPe9BycbcBH5tY-TrLBbQnbSTggnMZODcB_-RTCaXzoKg/exec';
+const SHEET_POST_URL='https://script.google.com/macros/s/AKfycbxVanh-e_jlx6N3MYNPCoK9bQxI5ficNOQeLGLB37eIbm0abxfEh8dTjaPxFfbawQwP/exec';
 const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vS-RNPfhsGqVtC7zn0DEpKs762RSBzCT1pKTW79C78gP97Fiz1Mk5H04K8PZ15gjwgRXvEiL6emgeTr/pub?gid=1991191224&single=true&output=csv';
 
 const schedules={Aira:['09:00','18:00'],Hazel:['10:00','19:00'],AJ:['09:00','16:00'],James:['08:00','15:00'],Michael:['10:00','19:00'],Denmark:['10:00','20:00'],Randy:['12:00','21:00']};
@@ -95,12 +94,20 @@ async function load(){
   const today=estNow().toLocaleDateString('en-US');
 
   let events={};
-  rows.forEach(r=>{
-    const n=r[0],t=r[1],d=r[2],time=new Date(r[3]);
-    if(!n||d!==today)return;
-    if(!events[n])events[n]=[];
-    events[n].push({type:t,time});
-  });
+rows.forEach(r=>{
+  const n=r[0],t=r[1];
+  if(!n || !r[3]) return;
+
+  const timeUTC=new Date(r[3]);
+  const estDate=timeUTC.toLocaleDateString('en-US',{timeZone:'America/New_York'});
+  const today=estNow().toLocaleDateString('en-US');
+
+  if(estDate!==today) return;
+
+  if(!events[n])events[n]=[];
+  events[n].push({type:t,time:timeUTC});
+});
+;
 
   const body=document.getElementById('tableBody');
   body.innerHTML='';
