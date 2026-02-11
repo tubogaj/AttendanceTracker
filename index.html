@@ -10,7 +10,7 @@
 <div class="max-w-7xl mx-auto">
 <div class="flex items-center justify-between mb-6">
 <h1 class="text-3xl font-bold">Ridge Capital Solutions — Shared Live Board (EST)</h1>
-<a href="#" onclick="unlockReports()" class="text-xs underline">Reports</a>
+<a href="https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/edit?gid=1991191224#gid=1991191224" target="_blank" class="bg-gray-800 text-white px-3 py-1 rounded text-sm">Report</a>
 </div>
 
 <div class="bg-white rounded-2xl shadow p-6 mb-6 grid md:grid-cols-5 gap-3">
@@ -35,10 +35,10 @@
 
 <script>
 const PASSWORD='Ridge2026!';
-const SHEET_POST_URL='https://script.google.com/macros/s/AKfycbxluH0nRb-q-6EZ8Y37YqYf_luc_SdeThLNBscY5Tb9ayr30ungN988UodaMrf-rjat/exec';
-const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/gviz/tq?tqx=out:csv&sheet=RawLogs';
+const SHEET_POST_URL='https://script.google.com/macros/s/AKfycbxUV3h8zWrJ_jzNw4ZSfrHPe9BycbcBH5tY-TrLBbQnbSTggnMZODcB_-RTCaXzoKg/exec';
+const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vS-RNPfhsGqVtC7zn0DEpKs762RSBzCT1pKTW79C78gP97Fiz1Mk5H04K8PZ15gjwgRXvEiL6emgeTr/pub?gid=1991191224&single=true&output=csv';
 
-function unlockReports(){const p=prompt('Enter password');if(p===PASSWORD)window.open('https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY','_blank');}
+
 function estNow(){return new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));}
 
 async function postEvent(name,type){
