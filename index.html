@@ -11,7 +11,7 @@
 
 <!-- Header (logo only) -->
 <div class="flex items-center justify-between mb-6">
-  <img src="https://i.postimg.cc/NjskjGmv/Ridge-White-Logo.png" class="h-14" />
+  <div class="flex items-center gap-3"><img src="https://i.postimg.cc/NjskjGmv/Ridge-White-Logo.png" class="h-20" /><span class="text-xl font-semibold">Attendance Tracker</span></div>
   <button onclick="openReport()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm">Report</button>
 </div>
 
@@ -31,7 +31,7 @@
 <div class="bg-white rounded-2xl shadow p-6 mb-6">
 <h2 class="text-xl font-semibold mb-3">Live Tracker</h2>
 <table class="w-full border text-sm">
-<thead class="bg-slate-200"><tr><th class="border p-2">Name</th><th class="border p-2">Shift</th><th class="border p-2">Login</th><th class="border p-2">Logout</th><th class="border p-2">Status</th></tr></thead>
+<thead class="bg-slate-200"><tr><th class="border p-2">Name</th><th class="border p-2">Shift</th><th class="border p-2">Login</th><th class="border p-2">Logout</th><th class="border p-2">Last Click</th><th class="border p-2">Status</th></tr></thead>
 <tbody id="tableBody"></tbody>
 </table>
 </div>
@@ -76,9 +76,12 @@ async function load(){
   const body=document.getElementById('tableBody'); body.innerHTML='';
   Object.keys(schedules).forEach(name=>{
     const ev=(events[name]||[]).sort((a,b)=>a.time-b.time);
-    let login=null,logout=null,lunchStart=null,breakActive=false,online=0,last=null;
+    let login=null,logout=null,lastEvent=null,lastEventTime=null;
     for(const e of ev){
-      if(e.type==='Login'){login=e.time;last=e.time;}
+      lastEvent=e.type; lastEventTime=e.time;
+      if(e.type==='Login'){login=e.time;}
+      if(e.type==='Logout'){logout=e.time;}
+    }
       else if(e.type==='Lunch'&&login){ if(!lunchStart){online+=mins(last,e.time);lunchStart=e.time;} else{last=e.time;lunchStart=null;} }
       else if(e.type==='Break'&&login){breakActive=!breakActive;}
       else if(e.type==='Logout'&&login){online+=mins(last,e.time);logout=e.time;last=null;}
@@ -86,13 +89,16 @@ async function load(){
     if(login&&last) online+=mins(last,estNow());
 
     let status='Offline';
-    if(login) status='Online';
-    if(lunchStart) status = mins(lunchStart,estNow())>60 ? 'Overlunch':'Lunch';
-    if(breakActive) status='Quick Bio';
-    if(login){const shift=new Date(login);const [h,m]=schedules[name][0].split(':');shift.setHours(h,m,0,0);shift.setMinutes(shift.getMinutes()+10);if(login>shift)status='Late';}
-    if(logout && online<requiredMin(name)) status='Undertime';
+    if(lastEvent==='Login'){
+      status='Online';
+      const shift=new Date(login);const [h,m]=schedules[name][0].split(':');shift.setHours(h,m,0,0);shift.setMinutes(shift.getMinutes()+10);
+      if(login>shift) status='Late';
+    }
+    if(lastEvent==='Lunch') status = (ev.filter(x=>x.type==='Lunch').length%2===1)?'Lunch':'Online';
+    if(lastEvent==='Break') status = (ev.filter(x=>x.type==='Break').length%2===1)?'Quick Bio':'Online';
+    if(lastEvent==='Logout') status='Offline';
 
-    body.innerHTML+=`<tr><td class='border p-2'>${name}</td><td class='border p-2'>${schedules[name][0]}-${schedules[name][1]}</td><td class='border p-2'>${login?login.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2'>${logout?logout.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2'>${status}</td></tr>`;
+    body.innerHTML+=`<tr><td class='border p-2'>${name}</td><td class='border p-2'>${schedules[name][0]}-${schedules[name][1]}</td><td class='border p-2'>${login?login.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2'>${logout?logout.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2'>${lastEventTime?lastEventTime.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2'>${status}</td></tr>`;
   });
  }catch(e){console.log('waiting for logs');}
 }
