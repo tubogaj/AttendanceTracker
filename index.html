@@ -49,65 +49,25 @@ const WEEKLY_SHEET_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8
 const MONTHLY_SHEET_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/edit?gid=258622705#gid=258622705';
 
 const schedules={Aira:['09:00','18:00'],Hazel:['10:00','19:00'],AJ:['09:00','16:00'],James:['08:00','15:00'],Michael:['10:00','19:00'],Denmark:['10:00','20:00'],Randy:['12:00','21:00']};
-const requiredMin=name=>['Aira','Hazel','Michael','Denmark','Randy'].includes(name)?480:420;
 
 function unlockReports(){const p=prompt('Enter password');if(p===PASSWORD)document.getElementById('reportBtns').classList.remove('hidden');}
 function openDaily(){window.open(DAILY_SHEET_URL,'_blank');}
-function openWeekly(){const d=new Date(document.getElementById('weekPick').value);if(!d)return;const sun=new Date(d);sun.setDate(d.getDate()-d.getDay());const sat=new Date(sun);sat.setDate(sun.getDate()+6);window.open(WEEKLY_SHEET_URL+`?start=${sun.toISOString()}&end=${sat.toISOString()}`,'_blank');}
-function openMonthly(){const m=document.getElementById('monthPick').value;if(!m)return;window.open(MONTHLY_SHEET_URL+`?month=${m}`,'_blank');}
+function openWeekly(){window.open(WEEKLY_SHEET_URL,'_blank');}
+function openMonthly(){window.open(MONTHLY_SHEET_URL,'_blank');}
 
 function estNow(){return new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));}
-function minutes(a,b){return Math.max(0,Math.floor((b-a)/60000));}
 
-async function postEvent(name,type){const now=estNow();await fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:now.toLocaleDateString('en-US'),time:now.toISOString()})});setTimeout(load,1500);} 
+async function postEvent(name,type){
+ try{
+  await fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
+  alert(type+" recorded for "+name);
+ }catch(e){alert('Connection error — check deployment permissions');}
+}
+
 async function login(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Login');}
 async function lunch(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Lunch');}
 async function breakTime(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Break');}
 async function logout(){const n=document.getElementById('name').value;if(!n)return alert('Select employee');postEvent(n,'Logout');}
-
-function shiftStartDate(name,base){const [h,m]=schedules[name][0].split(':');const d=new Date(base);d.setHours(h,m,0,0);return d;}
-
-async function load(){
-if(!SHEET_CSV_URL.startsWith('http'))return;
-const res=await fetch(SHEET_CSV_URL+'?t='+Date.now());
-const text=await res.text();
-const rows=text.split('\n').slice(1).map(r=>r.split(','));
-const today=estNow().toLocaleDateString('en-US');
-let events={};
-rows.forEach(r=>{const n=r[0],t=r[1]||r[2],d=r[2]||r[1],time=new Date(r[3]||r[4]);if(!n||d!==today)return;if(!events[n])events[n]=[];events[n].push({type:t,time});});
-
-const tbody=document.getElementById('tableBody');tbody.innerHTML='';
-Object.keys(schedules).forEach(name=>{
-const ev=(events[name]||[]).sort((a,b)=>a.time-b.time);
-let login=null,online=0,lunchStart=null,breakStart=null,status='Offline';
-let lastPoint=null;
-for(const e of ev){
- if(e.type==='Login'){login=e.time;lastPoint=e.time;status='Online';}
- else if(e.type==='Lunch'&&login){if(!lunchStart){online+=minutes(lastPoint,e.time);lunchStart=e.time;status='Lunch';}else{lastPoint=e.time;lunchStart=null;status='Online';}}
- else if(e.type==='Break'&&login){
-        // Break is tracked but DOES NOT deduct online time
-        if(!breakStart){breakStart=e.time;status='Quick Bio';}
-        else{breakStart=null;status='Online';}
-      }
- else if(e.type==='Logout'&&login){online+=minutes(lastPoint,e.time);lastPoint=null;}
- }
- if(login&&lastPoint)online+=minutes(lastPoint,estNow());
-
- // late calculation (10 min grace)
- let lateMin=0;if(login){const sched=shiftStartDate(name,login);sched.setMinutes(sched.getMinutes()+10);lateMin=Math.max(0,minutes(sched,login));}
- // overlunch
- let overlunch=0;if(lunchStart){overlunch=Math.max(0,minutes(lunchStart,estNow())-60);} 
- // undertime
- let undertime=0;if(login&&!lunchStart){const req=requiredMin(name);undertime=Math.max(0,req-online);} 
-
- if(overlunch>0)status='Overlunch';
- else if(lateMin>0&&status==='Online')status='Late';
- else if(undertime>0&&status==='Offline')status='Undertime';
-
- tbody.innerHTML+=`<tr><td class='border p-2'>${name}</td><td class='border p-2'>${schedules[name][0]}-${schedules[name][1]}</td><td class='border p-2'>${login?login.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2'>${online}</td><td class='border p-2'>${status}</td></tr>`;
-});
-}
-setInterval(load,60000);load();
 </script>
 </body>
 </html>
