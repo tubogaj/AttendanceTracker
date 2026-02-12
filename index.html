@@ -9,9 +9,12 @@
 <body class="bg-slate-100 min-h-screen p-6">
 <div class="max-w-7xl mx-auto">
 
-<!-- Header (logo only) -->
+<!-- Header -->
 <div class="flex items-center justify-between mb-6">
-  <div class="flex items-center gap-3"><img src="https://i.postimg.cc/NjskjGmv/Ridge-White-Logo.png" class="h-20" /><span class="text-xl font-semibold">Attendance Tracker</span></div>
+  <div class="flex items-center gap-3">
+    <img src="https://i.postimg.cc/NjskjGmv/Ridge-White-Logo.png" class="h-20" />
+    <span class="text-xl font-semibold">Attendance Tracker</span>
+  </div>
   <button onclick="openReport()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm">Report</button>
 </div>
 
@@ -31,7 +34,17 @@
 <div class="bg-white rounded-2xl shadow p-6 mb-6">
 <h2 class="text-xl font-semibold mb-3">Live Tracker</h2>
 <table class="w-full border text-sm">
-<thead class="bg-slate-200"><tr><th class="border p-2">Name</th><th class="border p-2">Shift</th><th class="border p-2">Login</th><th class="border p-2">Logout</th><th class="border p-2">Last Click</th><th class="border p-2">Status</th></tr></thead>
+<thead class="bg-slate-200">
+<tr>
+<th class="border p-2">Name</th>
+<th class="border p-2">Shift</th>
+<th class="border p-2">Login</th>
+<th class="border p-2">Logout</th>
+<th class="border p-2">Total Hours</th>
+<th class="border p-2">Last Click</th>
+<th class="border p-2">Status</th>
+</tr>
+</thead>
 <tbody id="tableBody"></tbody>
 </table>
 </div>
@@ -54,7 +67,7 @@ function pressEffect(btn){btn.classList.add('scale-95','shadow-inner','opacity-7
 
 function instantUpdate(name,type){
  if(!window.cachedEvents[name])window.cachedEvents[name]=[];
- window.cachedEvents[name].push({type,time:estNow()});
+ window.cachedEvents[name].push({type:type,time:estNow()});
  render();
 }
 
@@ -63,8 +76,8 @@ async function postEvent(name,type,btn){
  pressEffect(btn);
  instantUpdate(name,type);
  try{
-  await fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
- }catch(e){console.log('post fail',e)}
+  await fetch(SHEET_POST_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
+ }catch(e){console.log('POST failed',e)}
 }
 
 function login(btn){postEvent(document.getElementById('name').value,'Login',btn);} 
@@ -74,17 +87,17 @@ function logout(btn){postEvent(document.getElementById('name').value,'Logout',bt
 
 function calcOnlineHours(ev){
  if(!ev||!ev.length)return '0.00';
- let total=0,start=null,lunch=false;
+ let total=0,start=null,onLunch=false;
  for(const e of ev){
   if(e.type==='Login')start=e.time;
-  else if(e.type==='Lunch'&&start){if(!lunch){total+=e.time-start;lunch=true;}else{start=e.time;lunch=false;}}
+  else if(e.type==='Lunch'&&start){if(!onLunch){total+=e.time-start;start=null;onLunch=true;}else{start=e.time;onLunch=false;}}
   else if(e.type==='Logout'&&start){total+=e.time-start;start=null;}
  }
  if(start)total+=estNow()-start;
  return (total/3600000).toFixed(2);
 }
 
-function deriveStatus(ev,name){
+function deriveStatus(ev){
  if(!ev||!ev.length)return 'Offline';
  const last=ev[ev.length-1].type;
  if(last==='Logout')return 'Offline';
@@ -108,7 +121,7 @@ function render(){
 <td class='border p-2'>${logout?logout.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td>
 <td class='border p-2'>${calcOnlineHours(ev)}</td>
 <td class='border p-2'>${last?last.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td>
-<td class='border p-2'>${deriveStatus(ev,name)}</td>
+<td class='border p-2'>${deriveStatus(ev)}</td>
 </tr>`;
  });
 }
@@ -117,8 +130,7 @@ async function load(){
  try{
   const res=await fetch(SHEET_CSV_URL+"&t="+Date.now());
   const text=await res.text();
-  const rows=text.split('
-').slice(1).map(r=>r.split(','));
+  const rows=text.split('\n').slice(1).map(r=>r.split(','));
   const today=estNow().toLocaleDateString('en-US');
   let events={};
   rows.forEach(r=>{const n=r[0],t=r[1];if(!n||!r[3])return;const time=new Date(r[3]);const d=time.toLocaleDateString('en-US',{timeZone:'America/New_York'});if(d!==today)return;if(!events[n])events[n]=[];events[n].push({type:t,time});});
