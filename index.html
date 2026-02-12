@@ -9,7 +9,7 @@
 <body class="bg-slate-100 min-h-screen p-6">
 <div class="max-w-7xl mx-auto">
 
-<!-- Header (logo only) -->
+<!-- Header -->
 <div class="flex items-center justify-between mb-6">
   <div class="flex items-center gap-3">
     <img src="https://i.postimg.cc/NjskjGmv/Ridge-White-Logo.png" class="h-24" />
@@ -37,9 +37,9 @@
 <thead class="bg-slate-200">
 <tr>
 <th class="border p-2">Name</th>
-<th class="border p-2">Shift</th>
 <th class="border p-2">Login</th>
 <th class="border p-2">Logout</th>
+<th class="border p-2">Total Hours</th>
 <th class="border p-2">Last Click</th>
 <th class="border p-2">Status</th>
 </tr>
@@ -51,6 +51,7 @@
 
 <script>
 const PASSWORD='Ridge2026!';
+const REPORT_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/edit?gid=1991191224#gid=1991191224';
 const SHEET_POST_URL='https://script.google.com/macros/s/AKfycbxVanh-e_jlx6N3MYNPCoK9bQxI5ficNOQeLGLB37eIbm0abxfEh8dTjaPxFfbawQwP/exec';
 const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vS-RNPfhsGqVtC7zn0DEpKs762RSBzCT1pKTW79C78gP97Fiz1Mk5H04K8PZ15gjwgRXvEiL6emgeTr/pub?gid=1991191224&single=true&output=csv';
 
@@ -78,7 +79,7 @@ function postEvent(name,type,btn){
   headers:{'Content-Type':'application/json'},
   body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})
  });
- setTimeout(load,1500);
+ setTimeout(load,1200);
 }
 
 function login(btn){postEvent(document.getElementById('name').value,'Login',btn);}
@@ -86,28 +87,29 @@ function lunch(btn){postEvent(document.getElementById('name').value,'Lunch',btn)
 function breakTime(btn){postEvent(document.getElementById('name').value,'Break',btn);}
 function logout(btn){postEvent(document.getElementById('name').value,'Logout',btn);}
 
+window.cachedEvents={};
+
 async function load(){
  try{
   const res=await fetch(SHEET_CSV_URL+"&t="+Date.now());
   const text=await res.text();
   const rows=text.split('\n').slice(1).map(r=>r.split(','));
-  const today=estNow().toLocaleDateString('en-US');
 
   let events={};
-rows.forEach(r=>{
-  const n=r[0],t=r[1];
-  if(!n || !r[3]) return;
 
-  const timeUTC=new Date(r[3]);
-  const estDate=timeUTC.toLocaleDateString('en-US',{timeZone:'America/New_York'});
-  const today=estNow().toLocaleDateString('en-US');
+  rows.forEach(r=>{
+    const n=r[0],t=r[1];
+    if(!n || !r[3]) return;
 
-  if(estDate!==today) return;
+    const time=new Date(r[3]);
+    const estDate=time.toLocaleDateString('en-US',{timeZone:'America/New_York'});
+    const today=estNow().toLocaleDateString('en-US');
+    if(estDate!==today) return;
 
-  if(!events[n])events[n]=[];
-  events[n].push({type:t,time:timeUTC});
-});
-;
+    if(!events[n])events[n]=[];
+    events[n].push({type:t,time});
+    window.cachedEvents[n]=events[n];
+  });
 
   const body=document.getElementById('tableBody');
   body.innerHTML='';
@@ -139,17 +141,36 @@ rows.forEach(r=>{
 
     body.innerHTML+=`<tr>
 <td class='border p-2'>${name}</td>
-<td class='border p-2'>${schedules[name][0]}-${schedules[name][1]}</td>
 <td class='border p-2'>${login?login.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td>
 <td class='border p-2'>${logout?logout.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td>
+<td class='border p-2 totalHours' data-name='${name}'>0.00</td>
 <td class='border p-2'>${lastEventTime?lastEventTime.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td>
 <td class='border p-2'>${status}</td>
 </tr>`;
   });
+
  }catch(e){console.log('waiting for logs');}
 }
 
-setInterval(load,10000);
+function calcOnlineHours(ev){
+ if(!ev||!ev.length)return'0.00';
+ let total=0,start=null,lunch=false;
+ for(const e of ev){
+  if(e.type==='Login')start=e.time;
+  else if(e.type==='Lunch'&&start){if(!lunch){total+=e.time-start;lunch=true;}else{start=e.time;lunch=false}}
+  else if(e.type==='Logout'&&start){total+=e.time-start;start=null}
+ }
+ if(start)total+=estNow()-start;
+ return (total/3600000).toFixed(2);
+}
+
+function updateRealtimeHours(){
+ document.querySelectorAll(".totalHours").forEach(td=>{
+   td.innerText=calcOnlineHours(window.cachedEvents[td.dataset.name]);
+ });
+}
+
+setInterval(updateRealtimeHours,2000);
 load();
 </script>
 </body>
