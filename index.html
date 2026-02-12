@@ -76,8 +76,8 @@ async function load(){
  try{
   const res=await fetch(SHEET_CSV_URL+"&t="+Date.now());
   const text=await res.text();
-  const rows=text.split('
-').slice(1).map(r=>r.split(','));
+const rows=text.split('\n').slice(1).map(r=>r.split(','));
+
   const today=estNow().toLocaleDateString('en-US');
   let events={};
   rows.forEach(r=>{const n=r[0],t=r[1];if(!n||!r[3])return;const time=new Date(r[3]);const d=time.toLocaleDateString('en-US',{timeZone:'America/New_York'});if(d!==today)return;if(!events[n])events[n]=[];events[n].push({type:t,time});window.cachedEvents[n]=events[n];});
