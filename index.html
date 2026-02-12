@@ -76,25 +76,76 @@ async function load(){
  try{
   const res=await fetch(SHEET_CSV_URL+"&t="+Date.now());
   const text=await res.text();
-const rows=text.split('\n').slice(1).map(r=>r.split(','));
+  const rows=text.split('\n').slice(1).map(r=>r.split(','));
 
   const today=estNow().toLocaleDateString('en-US');
   let events={};
-  rows.forEach(r=>{const n=r[0],t=r[1];if(!n||!r[3])return;const time=new Date(r[3]);const d=time.toLocaleDateString('en-US',{timeZone:'America/New_York'});if(d!==today)return;if(!events[n])events[n]=[];events[n].push({type:t,time});window.cachedEvents[n]=events[n];});
-  const body=document.getElementById('tableBody'); body.innerHTML='';
+
+  rows.forEach(r=>{
+    const n=r[0],t=r[1];
+    if(!n||!r[3])return;
+
+    const time=new Date(r[3]);
+    const d=time.toLocaleDateString('en-US',{timeZone:'America/New_York'});
+    if(d!==today)return;
+
+    if(!events[n])events[n]=[];
+    events[n].push({type:t,time});
+    window.cachedEvents[n]=events[n];
+  });
+
+  const body=document.getElementById('tableBody');
+  body.innerHTML='';
+
   Object.keys(schedules).forEach(name=>{
     const ev=(events[name]||[]).sort((a,b)=>a.time-b.time);
+
     let login=null,logout=null,lastEvent=null,lastEventTime=null;
-    for(const e of ev){lastEvent=e.type;lastEventTime=e.time;if(e.type==='Login')login=e.time;if(e.type==='Logout')logout=e.time;}
+
+    for(const e of ev){
+      lastEvent=e.type;
+      lastEventTime=e.time;
+      if(e.type==='Login')login=e.time;
+      if(e.type==='Logout')logout=e.time;
+    }
+
     let status='Offline';
     if(lastEvent==='Login') status='Online';
     if(lastEvent==='Lunch') status=(ev.filter(x=>x.type==='Lunch').length%2===1)?'Lunch':'Online';
     if(lastEvent==='Break') status=(ev.filter(x=>x.type==='Break').length%2===1)?'Quick Bio':'Online';
     if(lastEvent==='Logout') status='Offline';
-    body.innerHTML+=`<tr><td class='border p-2'>${name}</td><td class='border p-2'>${login?login.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2'>${logout?logout.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2 totalHours' data-name='${name}'>0.00</td><td class='border p-2'>${lastEventTime?lastEventTime.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2'>${status}</td></tr>`;
+
+    // ===== ROW OUTPUT (THIS WAS MISSING) =====
+    body.innerHTML+=`<tr>
+      <td class='border p-2'>${name}</td>
+
+      <td class='border p-2'>
+      ${schedules[name][0]} - ${schedules[name][1]}
+      </td>
+
+      <td class='border p-2'>
+      ${login?login.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}
+      </td>
+
+      <td class='border p-2'>
+      ${logout?logout.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}
+      </td>
+
+      <td class='border p-2 totalHours' data-name='${name}'>0.00</td>
+
+      <td class='border p-2'>
+      ${lastEventTime?lastEventTime.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}
+      </td>
+
+      <td class='border p-2'>${status}</td>
+    </tr>`;
   });
- }catch(e){console.log('waiting for logs');}
+
+ }catch(e){
+  console.log('waiting for logs');
+ }
 }
+
 
 function updateRow(name){
  const rows=document.querySelectorAll('#tableBody tr');
