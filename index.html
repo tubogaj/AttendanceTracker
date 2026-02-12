@@ -70,10 +70,23 @@ function pressEffect(btn){
  setTimeout(()=>btn.classList.remove('scale-95','shadow-inner','opacity-70'),600);
 }
 
+function instantUpdate(name,type){
+ if(!window.cachedEvents[name]) window.cachedEvents[name]=[];
+
+ const now=estNow();
+ window.cachedEvents[name].push({type:type,time:now});
+
+ updateRow(name);
+}
+
 function postEvent(name,type,btn){
  if(!name){alert('Select employee');return}
+
  pressEffect(btn);
+ instantUpdate(name,type); // ⭐ ADD THIS LINE
+
  fetch(SHEET_POST_URL,{
+
   method:'POST',
   mode:'no-cors',
   headers:{'Content-Type':'application/json'},
@@ -172,6 +185,31 @@ function updateRealtimeHours(){
 
 setInterval(updateRealtimeHours,2000);
 load();
+function updateRow(name){
+ const rows=document.querySelectorAll("#tableBody tr");
+
+ rows.forEach(row=>{
+   if(row.children[0].innerText!==name) return;
+
+   const ev=window.cachedEvents[name];
+   if(!ev||!ev.length) return;
+
+   const last=ev[ev.length-1];
+
+   let status='Offline';
+
+   if(last.type==='Login') status='Online';
+
+   if(last.type==='Lunch'){
+     const count=ev.filter(x=>x.type==='Lunch').length;
+     status=(count%2===1)?'Lunch':'Online';
+   }
+
+   if(last.type==='Break'){
+     const count=ev.filter(x=>x.type==='Break').length;
+     status=(cou
+
+  
 </script>
 </body>
 </html>
