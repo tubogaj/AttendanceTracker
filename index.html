@@ -9,12 +9,9 @@
 <body class="bg-slate-100 min-h-screen p-6">
 <div class="max-w-7xl mx-auto">
 
-<!-- Header -->
+<!-- Header (logo only) -->
 <div class="flex items-center justify-between mb-6">
-  <div class="flex items-center gap-3">
-    <img src="https://i.postimg.cc/NjskjGmv/Ridge-White-Logo.png" class="h-24" />
-    <span class="text-xl font-semibold">Attendance Tracker</span>
-  </div>
+  <div class="flex items-center gap-3"><img src="https://i.postimg.cc/NjskjGmv/Ridge-White-Logo.png" class="h-20" /><span class="text-xl font-semibold">Attendance Tracker</span></div>
   <button onclick="openReport()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm">Report</button>
 </div>
 
@@ -34,16 +31,7 @@
 <div class="bg-white rounded-2xl shadow p-6 mb-6">
 <h2 class="text-xl font-semibold mb-3">Live Tracker</h2>
 <table class="w-full border text-sm">
-<thead class="bg-slate-200">
-<tr>
-<th class="border p-2">Name</th>
-<th class="border p-2">Login</th>
-<th class="border p-2">Logout</th>
-<th class="border p-2">Total Hours</th>
-<th class="border p-2">Last Click</th>
-<th class="border p-2">Status</th>
-</tr>
-</thead>
+<thead class="bg-slate-200"><tr><th class="border p-2">Name</th><th class="border p-2">Shift</th><th class="border p-2">Login</th><th class="border p-2">Logout</th><th class="border p-2">Last Click</th><th class="border p-2">Status</th></tr></thead>
 <tbody id="tableBody"></tbody>
 </table>
 </div>
@@ -52,164 +40,83 @@
 <script>
 const PASSWORD='Ridge2026!';
 const REPORT_URL='https://docs.google.com/spreadsheets/d/12rFLpvuiD_OaAec8Mf9d0Wgpj5OUZAJVbThkNRu9xiY/edit?gid=1991191224#gid=1991191224';
-const SHEET_POST_URL='https://script.google.com/macros/s/AKfycbxVanh-e_jlx6N3MYNPCoK9bQxI5ficNOQeLGLB37eIbm0abxfEh8dTjaPxFfbawQwP/exec';
+const SHEET_POST_URL='https://script.google.com/macros/s/AKfycbxUV3h8zWrJ_jzNw4ZSfrHPe9BycbcBH5tY-TrLBbQnbSTggnMZODcB_-RTCaXzoKg/exec';
 const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vS-RNPfhsGqVtC7zn0DEpKs762RSBzCT1pKTW79C78gP97Fiz1Mk5H04K8PZ15gjwgRXvEiL6emgeTr/pub?gid=1991191224&single=true&output=csv';
 
 const schedules={Aira:['09:00','18:00'],Hazel:['10:00','19:00'],AJ:['09:00','16:00'],James:['08:00','15:00'],Michael:['10:00','19:00'],Denmark:['10:00','20:00'],Randy:['12:00','21:00']};
 
 function estNow(){return new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));}
 
-function openReport(){
- const p=prompt('Enter password');
- if(p===PASSWORD)window.open(REPORT_URL,'_blank');
- else alert('Incorrect password');
-}
+function openReport(){const p=prompt('Enter password');if(p===PASSWORD)window.open(REPORT_URL,'_blank');else alert('Incorrect password');}
 
-function pressEffect(btn){
- btn.classList.add('scale-95','shadow-inner','opacity-70');
- setTimeout(()=>btn.classList.remove('scale-95','shadow-inner','opacity-70'),600);
-}
+function pressEffect(btn){btn.classList.add('scale-95','shadow-inner','opacity-70');setTimeout(()=>btn.classList.remove('scale-95','shadow-inner','opacity-70'),600);} 
+
+window.cachedEvents={};
 
 function instantUpdate(name,type){
  if(!window.cachedEvents[name]) window.cachedEvents[name]=[];
-
  const now=estNow();
  window.cachedEvents[name].push({type:type,time:now});
-
  updateRow(name);
 }
 
 function postEvent(name,type,btn){
  if(!name){alert('Select employee');return}
-
  pressEffect(btn);
- instantUpdate(name,type); // ⭐ ADD THIS LINE
-
- fetch(SHEET_POST_URL,{
-
-  method:'POST',
-  mode:'no-cors',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})
- });
+ instantUpdate(name,type);
+ fetch(SHEET_POST_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
  setTimeout(load,1200);
 }
-
-function login(btn){postEvent(document.getElementById('name').value,'Login',btn);}
-function lunch(btn){postEvent(document.getElementById('name').value,'Lunch',btn);}
-function breakTime(btn){postEvent(document.getElementById('name').value,'Break',btn);}
-function logout(btn){postEvent(document.getElementById('name').value,'Logout',btn);}
-
-window.cachedEvents={};
+function login(btn){postEvent(document.getElementById('name').value,'Login',btn);} 
+function lunch(btn){postEvent(document.getElementById('name').value,'Lunch',btn);} 
+function breakTime(btn){postEvent(document.getElementById('name').value,'Break',btn);} 
+function logout(btn){postEvent(document.getElementById('name').value,'Logout',btn);} 
 
 async function load(){
  try{
   const res=await fetch(SHEET_CSV_URL+"&t="+Date.now());
   const text=await res.text();
-  const rows=text.split('\n').slice(1).map(r=>r.split(','));
-
+  const rows=text.split('
+').slice(1).map(r=>r.split(','));
+  const today=estNow().toLocaleDateString('en-US');
   let events={};
-
-  rows.forEach(r=>{
-    const n=r[0],t=r[1];
-    if(!n || !r[3]) return;
-
-    const time=new Date(r[3]);
-    const estDate=time.toLocaleDateString('en-US',{timeZone:'America/New_York'});
-    const today=estNow().toLocaleDateString('en-US');
-    if(estDate!==today) return;
-
-    if(!events[n])events[n]=[];
-    events[n].push({type:t,time});
-    window.cachedEvents[n]=events[n];
-  });
-
-  const body=document.getElementById('tableBody');
-  body.innerHTML='';
-
+  rows.forEach(r=>{const n=r[0],t=r[1];if(!n||!r[3])return;const time=new Date(r[3]);const d=time.toLocaleDateString('en-US',{timeZone:'America/New_York'});if(d!==today)return;if(!events[n])events[n]=[];events[n].push({type:t,time});window.cachedEvents[n]=events[n];});
+  const body=document.getElementById('tableBody'); body.innerHTML='';
   Object.keys(schedules).forEach(name=>{
     const ev=(events[name]||[]).sort((a,b)=>a.time-b.time);
-
     let login=null,logout=null,lastEvent=null,lastEventTime=null;
-
-    for(const e of ev){
-      lastEvent=e.type;
-      lastEventTime=e.time;
-      if(e.type==='Login') login=e.time;
-      if(e.type==='Logout') logout=e.time;
-    }
-
+    for(const e of ev){lastEvent=e.type;lastEventTime=e.time;if(e.type==='Login')login=e.time;if(e.type==='Logout')logout=e.time;}
     let status='Offline';
-    if(lastEvent==='Login'){
-      status='Online';
-      const shift=new Date(login);
-      const [h,m]=schedules[name][0].split(':');
-      shift.setHours(h,m,0,0);
-      shift.setMinutes(shift.getMinutes()+10);
-      if(login>shift) status='Late';
-    }
+    if(lastEvent==='Login') status='Online';
     if(lastEvent==='Lunch') status=(ev.filter(x=>x.type==='Lunch').length%2===1)?'Lunch':'Online';
     if(lastEvent==='Break') status=(ev.filter(x=>x.type==='Break').length%2===1)?'Quick Bio':'Online';
     if(lastEvent==='Logout') status='Offline';
-
-    body.innerHTML+=`<tr>
-<td class='border p-2'>${name}</td>
-<td class='border p-2'>${login?login.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td>
-<td class='border p-2'>${logout?logout.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td>
-<td class='border p-2 totalHours' data-name='${name}'>0.00</td>
-<td class='border p-2'>${lastEventTime?lastEventTime.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td>
-<td class='border p-2'>${status}</td>
-</tr>`;
+    body.innerHTML+=`<tr><td class='border p-2'>${name}</td><td class='border p-2'>${login?login.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2'>${logout?logout.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2 totalHours' data-name='${name}'>0.00</td><td class='border p-2'>${lastEventTime?lastEventTime.toLocaleTimeString('en-US',{timeZone:'America/New_York'}):'-'}</td><td class='border p-2'>${status}</td></tr>`;
   });
-
  }catch(e){console.log('waiting for logs');}
 }
 
-function calcOnlineHours(ev){
- if(!ev||!ev.length)return'0.00';
- let total=0,start=null,lunch=false;
- for(const e of ev){
-  if(e.type==='Login')start=e.time;
-  else if(e.type==='Lunch'&&start){if(!lunch){total+=e.time-start;lunch=true;}else{start=e.time;lunch=false}}
-  else if(e.type==='Logout'&&start){total+=e.time-start;start=null}
- }
- if(start)total+=estNow()-start;
- return (total/3600000).toFixed(2);
-}
-
-function updateRealtimeHours(){
- document.querySelectorAll(".totalHours").forEach(td=>{
-   td.innerText=calcOnlineHours(window.cachedEvents[td.dataset.name]);
+function updateRow(name){
+ const rows=document.querySelectorAll('#tableBody tr');
+ rows.forEach(row=>{
+   if(row.children[0].innerText!==name) return;
+   const ev=window.cachedEvents[name];
+   if(!ev||!ev.length) return;
+   const last=ev[ev.length-1];
+   let status='Offline';
+   if(last.type==='Login') status='Online';
+   if(last.type==='Lunch'){const c=ev.filter(x=>x.type==='Lunch').length;status=(c%2===1)?'Lunch':'Online';}
+   if(last.type==='Break'){const c=ev.filter(x=>x.type==='Break').length;status=(c%2===1)?'Quick Bio':'Online';}
+   if(last.type==='Logout') status='Offline';
+   row.children[4].innerText=last.time.toLocaleTimeString('en-US',{timeZone:'America/New_York'});
+   row.children[5].innerText=status;
  });
 }
 
+function calcOnlineHours(ev){if(!ev||!ev.length)return'0.00';let total=0,start=null,lunch=false;for(const e of ev){if(e.type==='Login')start=e.time;else if(e.type==='Lunch'&&start){if(!lunch){total+=e.time-start;lunch=true;}else{start=e.time;lunch=false}}else if(e.type==='Logout'&&start){total+=e.time-start;start=null}}if(start)total+=estNow()-start;return (total/3600000).toFixed(2)}
+function updateRealtimeHours(){document.querySelectorAll('.totalHours').forEach(td=>{td.innerText=calcOnlineHours(window.cachedEvents[td.dataset.name])})}
 setInterval(updateRealtimeHours,2000);
 load();
-function updateRow(name){
- const rows=document.querySelectorAll("#tableBody tr");
-
- rows.forEach(row=>{
-   if(row.children[0].innerText!==name) return;
-
-   const ev=window.cachedEvents[name];
-   if(!ev||!ev.length) return;
-
-   const last=ev[ev.length-1];
-
-   let status='Offline';
-
-   if(last.type==='Login') status='Online';
-
-   if(last.type==='Lunch'){
-     const count=ev.filter(x=>x.type==='Lunch').length;
-     status=(count%2===1)?'Lunch':'Online';
-   }
-
-   if(last.type==='Break'){
-     const count=ev.filter(x=>x.type==='Break').length;
-     status=(cou
-
-  
 </script>
 </body>
 </html>
