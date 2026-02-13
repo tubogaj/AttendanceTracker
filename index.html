@@ -74,31 +74,33 @@ function instantUpdate(name,type){
 // ---- FIXED: form POST to avoid CORS ----
 function postEvent(name,type,btn){
  if(!name){alert('Select employee');return}
+
  pressEffect(btn);
  instantUpdate(name,type);
 
- const payload={
-   name:name,
-   type:type,
-   date:estNow().toLocaleDateString('en-US'),
-   time:estNow().toISOString()
+ const form = document.createElement("form");
+ form.method = "POST";
+ form.action = SHEET_POST_URL;
+ form.target = "hidden_iframe";
+
+ const payload = {
+   name: name,
+   type: type,
+   date: estNow().toLocaleDateString('en-US'),
+   time: estNow().toISOString()
  };
 
- const form=document.createElement('form');
- form.method='POST';
- form.action=SHEET_POST_URL;
- form.target='hidden_iframe';
-
- const input=document.createElement('input');
- input.type='hidden';
- input.name='data';
- input.value=JSON.stringify(payload);
+ const input = document.createElement("input");
+ input.type = "hidden";
+ input.name = "data";
+ input.value = JSON.stringify(payload);
 
  form.appendChild(input);
  document.body.appendChild(form);
  form.submit();
  document.body.removeChild(form);
 }
+
 
 function login(btn){postEvent(document.getElementById('name').value,'Login',btn);} 
 function lunch(btn){postEvent(document.getElementById('name').value,'Lunch',btn);} 
