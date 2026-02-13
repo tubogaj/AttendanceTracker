@@ -71,13 +71,33 @@ function instantUpdate(name,type){
  render();
 }
 
-async function postEvent(name,type,btn){
+// ---- FIXED: form POST to avoid CORS ----
+function postEvent(name,type,btn){
  if(!name){alert('Select employee');return}
  pressEffect(btn);
  instantUpdate(name,type);
- try{
-  await fetch(SHEET_POST_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,date:estNow().toLocaleDateString('en-US'),time:estNow().toISOString()})});
- }catch(e){console.log('POST failed',e)}
+
+ const payload={
+   name:name,
+   type:type,
+   date:estNow().toLocaleDateString('en-US'),
+   time:estNow().toISOString()
+ };
+
+ const form=document.createElement('form');
+ form.method='POST';
+ form.action=SHEET_POST_URL;
+ form.target='hidden_iframe';
+
+ const input=document.createElement('input');
+ input.type='hidden';
+ input.name='data';
+ input.value=JSON.stringify(payload);
+
+ form.appendChild(input);
+ document.body.appendChild(form);
+ form.submit();
+ document.body.removeChild(form);
 }
 
 function login(btn){postEvent(document.getElementById('name').value,'Login',btn);} 
@@ -142,5 +162,7 @@ async function load(){
 setInterval(render,2000);
 load();
 </script>
+
+<iframe name="hidden_iframe" style="display:none"></iframe>
 </body>
 </html>
